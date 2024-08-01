@@ -81,6 +81,21 @@ const get_random_movie = async (req, res) => {
     }
 }
 
+const get_all_movie = async (req, res) => {
+    if (req.user.isAdmin) {
+        try {
+            const movies = await Movie.find()
+            res.status(200).json(movies.reverse())
+
+        } catch (error) {
+            res.status(500).json(error)
+        }
+
+    } else {
+        res.status(403).json("You are not allowded")
+
+    }
+}
 
 
 module.exports = {
@@ -88,6 +103,7 @@ module.exports = {
     update_movie,
     delete_movie,
     get_movie,
-    get_random_movie
+    get_random_movie,
+    get_all_movie
 }
 

@@ -5,6 +5,7 @@ const dotenv = require('dotenv')
 const authRouter = require('./routes/auth')
 const userRouter = require('./routes/users')
 const moviesRouter = require('./routes/movies')
+const ListRouter = require('./routes/lists')
 
 dotenv.config()
 
@@ -19,6 +20,7 @@ app.use(express.json())
 app.use('/api/auth', authRouter)
 app.use('/api/users', userRouter)
 app.use('/api/movies', moviesRouter)
+app.use('/api/lists', ListRouter)
 
 
 
