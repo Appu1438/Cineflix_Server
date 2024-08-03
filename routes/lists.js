@@ -1,4 +1,10 @@
-const { create_list, delete_list, get_list, update_list, get_list_id, get_all_list } = require('../controllers/listController')
+const { create_list,
+    delete_list,
+    get_list,
+    update_list,
+    get_list_id,
+    get_all_list } = require('../controllers/listController')
+    
 const verify = require('../middleware/verifyToken')
 
 const router = require('express').Router()

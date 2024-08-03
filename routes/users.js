@@ -1,4 +1,15 @@
-const { update_user, delete_user, get_user, all_user, user_stats, add_user_fav, remove_user_fav, get_user_fav } = require('../controllers/userController')
+const { update_user,
+    delete_user,
+    get_user,
+    all_user,
+    user_stats,
+    add_user_fav,
+    remove_user_fav,
+    get_user_fav,
+    add_movie_to_history,
+    remove_movie_from_history,
+    get_user_history } = require('../controllers/userController')
+
 const verify = require('../middleware/verifyToken')
 
 const router = require('express').Router()
@@ -16,10 +27,14 @@ router.get('/stats', user_stats)
 //ADD USER FAV
 router.post('/fav/add', verify, add_user_fav)
 //REMOVE USER FAV
-router.delete('/fav/remove', verify, remove_user_fav)
+router.delete('/fav/delete', verify, remove_user_fav)
 //GET USER FAV
 router.get('/fav/:id', verify, get_user_fav)
-
-
+//ADD USER HISTORY
+router.post('/history/add', verify, add_movie_to_history)
+//REMOVE USER HISTORY
+router.delete('/history/delete', verify, remove_movie_from_history)
+//GET USER HISTORY
+router.get('/history/:id', verify, get_user_history)
 
 module.exports = router
