@@ -125,11 +125,12 @@ const add_user_fav = async (req, res) => {
                 // Check if the movie ID already exists in the content array
                 if (favCollection.content.includes(movieId)) {
                     return res.status(400).json("Movie already exists in favorites");
+                } 
+                else {
+                    // Add the movie ID to the content array
+                    favCollection.content.push(movieId);
+                    await favCollection.save();
                 }
-
-                // Add the movie ID to the content array
-                favCollection.content.push(movieId);
-                await favCollection.save();
             } else {
                 // Create a new favorite collection for the user
                 favCollection = new Favourites({

@@ -1,4 +1,5 @@
 const Movie = require('../models/Movie')
+const Review = require('../models/Reviews')
 
 const add_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -46,7 +47,7 @@ const delete_movie = async (req, res) => {
             res.status(500).json(error)
         }
     } else {
-        res.status(403).json("You are not allowded")
+        res.status(403).json("You are not allowded ")
 
     }
 }
@@ -92,10 +93,122 @@ const get_all_movie = async (req, res) => {
         }
 
     } else {
-        res.status(403).json("You are not allowded")
+        res.status(403).json("You are not allowded ")
 
     }
 }
+const add_review = async (req, res) => {
+    const { userId, userName, movieId, rating, review } = req.body;
+
+    if (req.user.id === userId || req.user.isAdmin) {
+        const newReview = new Review({
+            userId,
+            userName,
+            movieId,
+            rating,
+            review
+        });
+
+        try {
+            // Save the new review
+            const savedReview = await newReview.save();
+
+            // Find the movie and update
+            const movie = await Movie.findById(movieId);
+            if (!movie) {
+                return res.status(404).json({ message: 'Movie not found.' });
+            }
+
+            // Push the new rating to the ratings array
+            movie.ratings.push(rating);
+
+            // Update reviewCount
+            movie.reviewcount = (movie.reviewcount || 0) + 1;
+
+            // Recalculate average rating
+            const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
+            movie.average = movie.ratings.length > 0 ? totalRating / movie.ratings.length : 0;
+
+            // Save the updated movie document
+            await movie.save();
+
+            res.status(200).json({
+                message: 'Review added successfully and movie updated.',
+                review: savedReview,
+                movie
+            });
+        } catch (error) {
+            console.error('Error adding review or updating movie:', error);
+            res.status(500).json({ message: 'Error adding review or updating movie.', error });
+        }
+    } else {
+        res.status(403).json("You are not allowed to add a review for this user.");
+    }
+};
+
+const delete_review = async (req, res) => {
+    const { id } = req.body; // Extract the review ID from the request body
+    console.log(`Received request to delete review with ID: ${id}`);
+
+    try {
+        // Find the review by ID
+        const review = await Review.findById(id);
+        if (!review) {
+            console.log(`Review with ID: ${id} not found.`);
+            return res.status(404).json({ message: 'Review not found.' });
+        }
+
+        // Check if the user who submitted the review is the one making the request
+        if (req.user.id == review.userId || req.user.isAdmin) {
+            // Delete the review
+            await Review.deleteOne({ _id: id });
+            console.log(`Review with ID: ${id} deleted successfully.`);
+
+            // Find the associated movie
+            const movie = await Movie.findById(review.movieId);
+            if (!movie) {
+                return res.status(404).json({ message: 'Movie not found.' });
+            }
+
+            // Remove the rating from the ratings array
+            movie.ratings = movie.ratings.filter(r => r !== review.rating);
+
+            // Update reviewCount
+            movie.reviewcount = Math.max((movie.reviewcount || 0) - 1, 0);
+
+            // Recalculate average rating
+            const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
+            movie.average = movie.ratings.length > 0 ? totalRating / movie.ratings.length : 0;
+
+            // Save the updated movie document
+            await movie.save();
+
+            res.status(200).json({ message: 'Review deleted successfully and movie updated.' });
+        } else {
+            console.log(`User ID: ${req.user.id} is not allowed to delete review with ID: ${id}.`);
+            res.status(403).json({ message: 'You are not allowed to delete this review.' });
+        }
+    } catch (error) {
+        console.error(`Error deleting review with ID: ${id}:`, error);
+        res.status(500).json({ message: 'Internal server error', error });
+    }
+};
+const get_reviews_by_movieId = async (req, res) => {
+    const  movieId  = req.params.id; // Extract movieId from request parameters
+
+    try {
+        // Find all reviews with the given movieId
+        const reviews = await Review.find({ movieId });
+
+        if (reviews.length === 0) {
+            return res.status(404).json({ message: 'No reviews found for this movie.' });
+        }
+
+        res.status(200).json(reviews);
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
 
 
 module.exports = {
@@ -104,6 +217,9 @@ module.exports = {
     delete_movie,
     get_movie,
     get_random_movie,
-    get_all_movie
+    get_all_movie,
+    add_review,
+    delete_review,
+    get_reviews_by_movieId
 }
 
