@@ -2,7 +2,6 @@ const User = require('../models/User')
 const Favourites = require('../models/Favourites')
 const History = require('../models/History')
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken')
 
 const update_user = async (req, res) => {
     if (req.user.id == req.params.id || req.user.isAdmin) {

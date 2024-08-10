@@ -2,12 +2,15 @@ const express = require('express')
 const app = express()
 const mongoose = require('mongoose')
 const dotenv = require('dotenv')
+const cors=require('cors')
+
 const authRouter = require('./routes/auth')
 const userRouter = require('./routes/users')
 const moviesRouter = require('./routes/movies')
 const ListRouter = require('./routes/lists')
 
 dotenv.config()
+app.use(cors())
 
 mongoose.connect(process.env.MONGO_URL).then(() => {
     console.log("Database Connected")
@@ -24,6 +27,6 @@ app.use('/api/lists', ListRouter)
 
 
 
-app.listen(8000, () => {
-    console.log('Server Running in 8000');
+app.listen(process.env.PORT, () => {
+    console.log(`Server Running in ${process.env.PORT}`);
 })
