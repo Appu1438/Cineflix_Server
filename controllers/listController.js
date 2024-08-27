@@ -60,7 +60,10 @@ const get_list = async (req, res) => {
                         $sample: { size: 10 }
                     },
                     {
-                        $match: { type: typeQuery, genre: genreQuery }
+                        $match: {
+                            type: typeQuery,
+                            genre: { $in: [genreQuery] }
+                        }
                     }
                 ])
             } else {

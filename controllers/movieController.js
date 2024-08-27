@@ -68,12 +68,16 @@ const get_random_movie = async (req, res) => {
         if (type == 'series') {
             movie = await Movie.aggregate([
                 { $match: { isSeries: true } },
-                { $sample: { size: 1 } }
+                { $sample: { size: 5 } }
+            ])
+        } else if (type == 'movie') {
+            movie = await Movie.aggregate([
+                { $match: { isSeries: false } },
+                { $sample: { size: 5 } }
             ])
         } else {
             movie = await Movie.aggregate([
-                { $match: { isSeries: false } },
-                { $sample: { size: 1 } }
+                { $sample: { size: 5 } }
             ])
         }
         res.status(200).json(movie)
@@ -194,7 +198,7 @@ const delete_review = async (req, res) => {
     }
 };
 const get_reviews_by_movieId = async (req, res) => {
-    const  movieId  = req.params.id; // Extract movieId from request parameters
+    const movieId = req.params.id; // Extract movieId from request parameters
 
     try {
         // Find all reviews with the given movieId
