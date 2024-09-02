@@ -19,7 +19,7 @@ const delete_list = async (req, res) => {
     if (req.user.isAdmin) {
         try {
             const deletedList = await List.findByIdAndDelete(req.params.id)
-            res.status(200).json(deletedList, "Deleted")
+            res.status(200).json(deletedList)
 
         } catch (error) {
             res.status(500).json(error)
