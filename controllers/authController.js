@@ -4,19 +4,23 @@ const jwt = require('jsonwebtoken')
 
 
 const register = async (req, res) => {
+    console.log(req.body);
+
     const newUser = new User({
         username: req.body.username,
         email: req.body.email,
-        password: await bcrypt.hash(req.body.password, 10)
-    })
-    try {
-        const user = await newUser.save()
-        res.status(201).json(user)
-    } catch (error) {
-        res.status(500).json(error)
+        password: await bcrypt.hash(req.body.password, 10),
+        isAdmin: req.body.isAdmin ? req.body.isAdmin : false
+    });
 
+    try {
+        const user = await newUser.save();
+        res.status(201).json(user);
+    } catch (error) {
+        console.error("Error creating user:", error);
+        res.status(500).json({ message: "Internal server error", error });
     }
-}
+};
 
 const login = async (req, res) => {
 
