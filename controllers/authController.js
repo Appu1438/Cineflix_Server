@@ -104,9 +104,27 @@ const refreshToken = async (req, res) => {
 
 };
 
+const logout = async (req, res) => {
+
+    const { userId } = req.body; // User ID or other identifying information
+    console.log(userId)
+
+    try {
+        // Find the user and clear the refresh token
+        await User.findByIdAndUpdate(userId, { refreshToken: null });
+        console.log('success')
+        res.status(200).json({ message: 'Logout successful' });
+
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ message: 'Server error during logout' });
+    }
+}
+
 
 module.exports = {
     register,
     login,
-    refreshToken
+    refreshToken,
+    logout
 }
