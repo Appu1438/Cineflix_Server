@@ -1,20 +1,21 @@
 const User = require('../models/User')
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const { registerValidation, loginValidation } = require('../utils/validation');
 
 // Generate access token
 const generateAccessToken = (user) => {
     return jwt.sign(
         { id: user._id, isAdmin: user.isAdmin },
         process.env.JWT_SECRET,
-        { expiresIn: '1d' }  // Access token expiration time
+        { expiresIn: '1min' }  // Access token expiration time
     );
 };
 
 // Generate refresh token
 const generateRefreshToken = (user) => {
     return jwt.sign(
-        { id: user._id, isAdmin: user.isAdmin },
+        { id: user._id },
         process.env.JWT_REFRESH_SECRET,  // Use a different secret for refresh token
         { expiresIn: '7d' }  // Refresh token expiration time (e.g., 7 days)
     );
@@ -23,17 +24,28 @@ const generateRefreshToken = (user) => {
 
 const register = async (req, res) => {
     console.log(req.body);
-
-    const newUser = new User({
-        username: req.body.username,
-        email: req.body.email,
-        password: await bcrypt.hash(req.body.password, 10),
-        isAdmin: req.body.isAdmin ? req.body.isAdmin : false
-    });
-
+    const { error } = registerValidation(req.body);
+    if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+    }
     try {
+        // Check if email already exists
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser) {
+            return res.status(400).json({ message: "Email already exists" });
+        }
+
+        // Create new user
+        const newUser = new User({
+            username: req.body.username,
+            email: req.body.email,
+            password: await bcrypt.hash(req.body.password, 10),
+            isAdmin: req.body.isAdmin ? req.body.isAdmin : false
+        });
+
         const user = await newUser.save();
         res.status(201).json(user);
+
     } catch (error) {
         console.error("Error creating user:", error);
         res.status(500).json({ message: "Internal server error", error });
@@ -41,90 +53,89 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+    // Validate the input
+    const { error } = loginValidation(req.body);
+    if (error) {
+        const errorMessages = error.details.map((err) => err.message);
+        return res.status(400).json({ error: errorMessages });
+    }
 
     try {
-
-        const { email, password } = req.body
-        const user = await User.findOne({ email: email })
+        const { email, password } = req.body;
+        const user = await User.findOne({ email: email });
         if (!user) {
-            res.status(401).json("User Not Found")
-        } else {
-            if (await bcrypt.compare(password, user.password)) {
-                const accessToken = generateAccessToken(user);
-                const refreshToken = generateRefreshToken(user);
-
-                user.refreshToken = refreshToken;
-                await user.save();
-
-                const { password, refreshToken: _, ...info } = user._doc;
-                res.status(200).json({ ...info, accessToken })
-            } else {
-                res.status(401).json("Wrong Password")
-            }
+            return res.status(401).json({ message: "User Not Found" });
         }
-    } catch (error) {
-        res.status(500).json(error)
-    }
-}
 
-const refreshToken = async (req, res) => {
-    const id = req.body.id;
-    console.log(id);
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(401).json({ message: "Wrong Password" });
+        }
 
+        // Generate access and refresh tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
 
-    if (!id) {
-        return res.status(401).json("User ID is required!");
-    }
+        // Remove the password from the response
+        const { password: pwd, ...info } = user._doc;
 
-    const user = await User.findById(id);
-    if (!user || !user.refreshToken) {
-        return res.status(401).json("Refresh token not found!");
-    }
-    console.log(user.refreshToken)
-    // Verify the refresh token
-    try {
-        jwt.verify(user.refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
-            if (err) {
-                console.log('err');
-                res.status(403).json(err);
-            } else {
-                // Generate a new access token
-                const newAccessToken = jwt.sign(
-                    { id: user.id, isAdmin: user.isAdmin },
-                    process.env.JWT_SECRET,
-                    { expiresIn: '1d' }
-                );
-                res.status(200).json({ accessToken: newAccessToken });
-            }
+        res.status(200).json({
+            ...info,
+            accessToken,
+            refreshToken,
         });
     } catch (error) {
-        console.log(err);
-        res.status(403).json(err);
+        console.error("Login error:", error);
+        res.status(500).json({ message: "Internal server error", error });
     }
-
 };
 
-const logout = async (req, res) => {
+const refreshToken = async (req, res) => {
+    const refreshToken = req.body.refreshToken;
 
-    const { userId } = req.body; // User ID or other identifying information
-    console.log(userId)
+    if (!refreshToken) {
+        return res.status(401).json("Token is required!");
+    }
 
     try {
-        // Find the user and clear the refresh token
-        await User.findByIdAndUpdate(userId, { refreshToken: null });
-        console.log('success')
-        res.status(200).json({ message: 'Logout successful' });
+        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, user) => {
+            if (err) {
+                return res.status(403).json("Invalid refresh token");
+            }
 
+            // Fetch the latest user details from the database
+            const latestUserDetails = await User.findById(user.id);
+
+            if (!latestUserDetails) {
+                return res.status(404).json("User not found");
+            }
+
+            // Generate a new access token
+            const newAccessToken = jwt.sign(
+                { id: latestUserDetails._id, isAdmin: latestUserDetails.isAdmin },
+                process.env.JWT_SECRET,
+                { expiresIn: '1min' }  // Adjust expiration as needed
+            );
+
+            // Destructure to exclude the password from the response
+            const { password, ...info } = latestUserDetails._doc;
+
+            // Return the user info without the password, and include access and refresh tokens
+            res.status(200).json({
+                ...info,                // Return all user data except the password
+                accessToken: newAccessToken,
+                refreshToken            // Return the same refresh token
+            });
+        });
     } catch (error) {
-        console.error('Logout error:', error);
-        res.status(500).json({ message: 'Server error during logout' });
+        console.log(error);
+        return res.status(500).json("Internal Server Error");
     }
-}
+};
 
 
 module.exports = {
     register,
     login,
     refreshToken,
-    logout
 }

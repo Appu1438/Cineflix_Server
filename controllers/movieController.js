@@ -1,5 +1,6 @@
 const Movie = require('../models/Movie')
 const Review = require('../models/Reviews')
+const List=require('../models/List')
 
 const add_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -42,6 +43,11 @@ const delete_movie = async (req, res) => {
     if (req.user.isAdmin) {
         try {
             const deletedMovie = await Movie.findByIdAndDelete(req.params.id)
+            await List.updateMany(
+                { content: req.params.id },    // Find all lists that contain the movie ID in their content array
+                { $pull: { content: req.params.id } } // Remove the movie ID from the content array
+            );
+
             res.status(200).json(deletedMovie)
         } catch (error) {
             res.status(500).json(error)
