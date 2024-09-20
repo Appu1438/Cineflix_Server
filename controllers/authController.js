@@ -57,27 +57,35 @@ const login = async (req, res) => {
     const { error } = loginValidation(req.body);
     if (error) {
         const errorMessages = error.details.map((err) => err.message);
+        console.log("Validation errors:", errorMessages); // Log validation errors
         return res.status(400).json({ error: errorMessages });
     }
 
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email: email });
+        console.log("Login attempt for email:", email); // Log login attempt
+
+        const user = await User.findOne({ email });
         if (!user) {
+            console.log("User not found:", email); // Log if user is not found
             return res.status(401).json({ message: "User Not Found" });
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
+            console.log("Invalid password for user:", email); // Log if password is incorrect
             return res.status(401).json({ message: "Wrong Password" });
         }
 
-        // Generate access and refresh tokens
+        // Generate tokens
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
 
-        // Remove the password from the response
+        // Remove the password from the user object
         const { password: pwd, ...info } = user._doc;
+
+        // Log successful login
+        console.log("Login successful for user:", email);
 
         res.status(200).json({
             ...info,
@@ -85,20 +93,22 @@ const login = async (req, res) => {
             refreshToken,
         });
     } catch (error) {
-        console.error("Login error:", error);
+        console.error("Login error:", error); // Log any unexpected errors
         res.status(500).json({ message: "Internal server error", error });
     }
 };
 
+
 const refreshToken = async (req, res) => {
     const refreshToken = req.body.refreshToken;
+    console.log(refreshToken)
 
     if (!refreshToken) {
         return res.status(401).json("Token is required!");
     }
-
     try {
         jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, user) => {
+            // console.log(user)
             if (err) {
                 return res.status(403).json("Invalid refresh token");
             }
@@ -111,20 +121,10 @@ const refreshToken = async (req, res) => {
             }
 
             // Generate a new access token
-            const newAccessToken = jwt.sign(
-                { id: latestUserDetails._id, isAdmin: latestUserDetails.isAdmin },
-                process.env.JWT_SECRET,
-                { expiresIn: '1min' }  // Adjust expiration as needed
-            );
+            const newAccessToken = generateAccessToken(latestUserDetails)
 
-            // Destructure to exclude the password from the response
-            const { password, ...info } = latestUserDetails._doc;
-
-            // Return the user info without the password, and include access and refresh tokens
             res.status(200).json({
-                ...info,                // Return all user data except the password
                 accessToken: newAccessToken,
-                refreshToken            // Return the same refresh token
             });
         });
     } catch (error) {
@@ -133,9 +133,22 @@ const refreshToken = async (req, res) => {
     }
 };
 
+const get_User = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id, '-password '); // Exclude password and refreshToken
+        if (!user) {
+            return res.status(404).json("User not found");
+        }
+        // Respond with the full user data
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json("Internal Server Error");
+    }
+}
 
 module.exports = {
     register,
     login,
     refreshToken,
+    get_User
 }
