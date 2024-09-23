@@ -101,7 +101,7 @@ const login = async (req, res) => {
 
 const refreshToken = async (req, res) => {
     const refreshToken = req.body.refreshToken;
-    console.log(refreshToken)
+    // console.log(refreshToken)
 
     if (!refreshToken) {
         return res.status(401).json("Token is required!");

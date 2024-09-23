@@ -124,7 +124,7 @@ const add_user_fav = async (req, res) => {
                 // Check if the movie ID already exists in the content array
                 if (favCollection.content.includes(movieId)) {
                     return res.status(400).json("Movie already exists in favorites");
-                } 
+                }
                 else {
                     // Add the movie ID to the content array
                     favCollection.content.push(movieId);
@@ -151,9 +151,9 @@ const add_user_fav = async (req, res) => {
 }
 
 const remove_user_fav = async (req, res) => {
-    console.log(req.body);
-    const userId = req.body.userId;
-    const movieId = req.body.movieId;
+    console.log(req.query);
+    const userId = req.query.userId;
+    const movieId = req.query.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
 
@@ -196,16 +196,15 @@ const get_user_fav = async (req, res) => {
             let favCollection = await Favourites.findOne({ userId });
 
             if (favCollection) {
-                res.status(200).json([favCollection]);
+                res.status(200).json(favCollection);
             } else {
-                return res.status(400).json("Favorites collection not found");
+               res.status(400).json("Favorites collection not found");
             }
         } catch (error) {
             res.status(500).json(error);
         }
     } else {
         res.status(403).json("You can get your fav only")
-
     }
 };
 
