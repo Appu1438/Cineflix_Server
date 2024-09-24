@@ -198,7 +198,7 @@ const get_user_fav = async (req, res) => {
             if (favCollection) {
                 res.status(200).json(favCollection);
             } else {
-               res.status(400).json("Favorites collection not found");
+                res.status(400).json("Favorites collection not found");
             }
         } catch (error) {
             res.status(500).json(error);
@@ -210,7 +210,7 @@ const get_user_fav = async (req, res) => {
 
 const add_movie_to_history = async (req, res) => {
     const { userId, movieId } = req.body;
-
+    
     if (req.user.id == userId || req.user.isAdmin) {
 
 
@@ -297,7 +297,7 @@ const get_user_history = async (req, res) => {
             let historyCollection = await History.findOne({ userId });
 
             if (historyCollection) {
-                res.status(200).json([historyCollection]);
+                res.status(200).json(historyCollection);
             } else {
                 return res.status(400).json("History was not found");
             }
