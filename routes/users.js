@@ -8,7 +8,10 @@ const { update_user,
     get_user_fav,
     add_movie_to_history,
     remove_movie_from_history,
-    get_user_history } = require('../controllers/userController')
+    get_user_history,
+    add_user_watchlater,
+    remove_user_watchlater,
+    get_user_watchlater } = require('../controllers/userController')
 
 const verify = require('../middleware/verifyToken')
 
@@ -31,6 +34,12 @@ router.post('/fav/add', add_user_fav)
 router.delete('/fav/delete', remove_user_fav)
 
 router.get('/fav/:id', get_user_fav)
+
+router.post('/watch/add', add_user_watchlater)
+
+router.delete('/watch/delete', remove_user_watchlater)
+
+router.get('/watch/:id', get_user_watchlater)
 
 router.post('/history/add', add_movie_to_history)
 

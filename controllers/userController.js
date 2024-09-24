@@ -1,6 +1,7 @@
 const User = require('../models/User')
 const Favourites = require('../models/Favourites')
 const History = require('../models/History')
+const WatchLater = require('../models/WatchLater')
 const bcrypt = require('bcryptjs');
 
 const update_user = async (req, res) => {
@@ -208,9 +209,109 @@ const get_user_fav = async (req, res) => {
     }
 };
 
+const add_user_watchlater = async (req, res) => {
+
+    const userId = req.body.userId;
+    const movieId = req.body.movieId;
+
+    if (req.user.id == userId || req.user.isAdmin) {
+
+
+        try {
+
+            let WatchLaterCollection = await WatchLater.findOne({ userId });
+
+            if (WatchLaterCollection) {
+                // Check if the movie ID already exists in the content array
+                if (WatchLaterCollection.content.includes(movieId)) {
+                    return res.status(400).json("Movie already exists in WatchLater");
+                }
+                else {
+                    // Add the movie ID to the content array
+                    WatchLaterCollection.content.push(movieId);
+                    await WatchLaterCollection.save();
+                }
+            } else {
+                // Create a new favorite collection for the user
+                WatchLaterCollection = new WatchLater({
+                    userId,
+                    content: [movieId]
+                });
+                await WatchLaterCollection.save();
+            }
+
+            res.status(200).json(WatchLaterCollection);
+
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    } else {
+        res.status(403).json("You can update your account only")
+
+    }
+}
+
+const remove_user_watchlater = async (req, res) => {
+    console.log(req.query);
+    const userId = req.query.userId;
+    const movieId = req.query.movieId;
+
+    if (req.user.id == userId || req.user.isAdmin) {
+
+
+        try {
+            // Find the favorite collection for the user
+            let WatchLaterCollection = await WatchLater.findOne({ userId });
+
+            if (WatchLaterCollection) {
+                // Check if the movie ID exists in the content array
+                const movieIndex = WatchLaterCollection.content.indexOf(movieId);
+                if (movieIndex === -1) {
+                    return res.status(400).json("Movie does not exist in WatchLater");
+                }
+
+                // Remove the movie ID from the content array
+                WatchLaterCollection.content.splice(movieIndex, 1);
+                await WatchLaterCollection.save();
+
+                res.status(200).json(WatchLaterCollection);
+            } else {
+                return res.status(400).json("WatchLaterCollection collection not found");
+            }
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    } else {
+        res.status(403).json("You can update your account only")
+
+    }
+};
+
+const get_user_watchlater = async (req, res) => {
+    const userId = req.params.id;
+    if (req.user.id == userId || req.user.isAdmin) {
+
+
+        try {
+            // Find the favorite collection for the user
+            let WatchLaterCollection = await WatchLater.findOne({ userId });
+
+            if (WatchLaterCollection) {
+                res.status(200).json(WatchLaterCollection);
+            } else {
+                res.status(400).json("WatchLaterCollection collection not found");
+            }
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    } else {
+        res.status(403).json("You can get your WatchLaterCollection only")
+    }
+};
+
 const add_movie_to_history = async (req, res) => {
     const { userId, movieId } = req.body;
-    
+
     if (req.user.id == userId || req.user.isAdmin) {
 
 
@@ -319,6 +420,9 @@ module.exports = {
     add_user_fav,
     remove_user_fav,
     get_user_fav,
+    add_user_watchlater,
+    remove_user_watchlater,
+    get_user_watchlater,
     add_movie_to_history,
     remove_movie_from_history,
     get_user_history
