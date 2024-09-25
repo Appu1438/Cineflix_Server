@@ -1,6 +1,8 @@
 const Movie = require('../models/Movie')
 const Review = require('../models/Reviews')
-const List=require('../models/List')
+const List = require('../models/List')
+const Likes = require('../models/Likes')
+const Dislikes = require('../models/Dislikes')
 
 const add_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -221,6 +223,142 @@ const get_reviews_by_movieId = async (req, res) => {
 };
 
 
+// Like a movie
+const like_movie = async (req, res) => {
+    const userId = req.body.userId;
+    const movieId = req.body.movieId;
+
+    try {
+        // Find or create the user's likes collection
+        let likeCollection = await Likes.findOne({ userId });
+        if (!likeCollection) {
+            likeCollection = new Likes({ userId, content: [] });
+        }
+
+        // Check if the movie is already liked
+        const isLiked = likeCollection.content.includes(movieId);
+
+        if (isLiked) {
+            // Remove the movie from the likes collection (unlike)
+            likeCollection.content = likeCollection.content.filter(id => id !== movieId);
+            await likeCollection.save();
+
+            // Decrement the likes in the movie collection
+            await Movie.findByIdAndUpdate(movieId, { $inc: { likes: -1 } });
+            const [updatedLikesCollection, updatedDislikesCollection] = await Promise.all([
+                Likes.findOne({ userId }),
+                Dislikes.findOne({ userId })
+            ]);
+
+            // Send the updated collections to the frontend
+            res.status(200).json({
+                likes: updatedLikesCollection ,
+                dislikes: updatedDislikesCollection 
+            });
+        } else {
+            // Add movie to the likes collection (like)
+            likeCollection.content.push(movieId);
+            await likeCollection.save();
+
+            // Increment the likes in the movie collection
+            await Movie.findByIdAndUpdate(movieId, { $inc: { likes: 1 } });
+
+            // If the movie is in the dislikes collection, remove it and decrement dislikes
+            let dislikeCollection = await Dislikes.findOne({ userId });
+            if (dislikeCollection && dislikeCollection.content.includes(movieId)) {
+                dislikeCollection.content = dislikeCollection.content.filter(id => id !== movieId);
+                await dislikeCollection.save();
+
+                // Decrement dislikes in the movie collection
+                await Movie.findByIdAndUpdate(movieId, { $inc: { dislikes: -1 } });
+            }
+
+            const [updatedLikesCollection, updatedDislikesCollection] = await Promise.all([
+                Likes.findOne({ userId }),
+                Dislikes.findOne({ userId })
+            ]);
+
+            // Send the updated collections to the frontend
+            res.status(200).json({
+                likes: updatedLikesCollection ,
+                dislikes: updatedDislikesCollection 
+            });
+        }
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
+
+// Dislike a movie
+const dislike_movie = async (req, res) => {
+    console.log(req.query)
+    const userId = req.query.userId;
+    const movieId = req.query.movieId;
+
+    try {
+        // Find or create the user's dislikes collection
+        let dislikeCollection = await Dislikes.findOne({ userId });
+        if (!dislikeCollection) {
+            dislikeCollection = new Dislikes({ userId, content: [] });
+        }
+
+        // Check if the movie is already disliked
+        const isDisliked = dislikeCollection.content.includes(movieId);
+
+        if (isDisliked) {
+            // Remove the movie from the dislikes collection (undislike)
+            dislikeCollection.content = dislikeCollection.content.filter(id => id !== movieId);
+            await dislikeCollection.save();
+
+            // Decrement the dislikes in the movie collection
+            await Movie.findByIdAndUpdate(movieId, { $inc: { dislikes: -1 } });
+
+            const [updatedLikesCollection, updatedDislikesCollection] = await Promise.all([
+                Likes.findOne({ userId }),
+                Dislikes.findOne({ userId })
+            ]);
+
+            // Send the updated collections to the frontend
+            res.status(200).json({
+                likes: updatedLikesCollection ,
+                dislikes: updatedDislikesCollection 
+            });
+        } else {
+            // Add movie to the dislikes collection (dislike)
+            dislikeCollection.content.push(movieId);
+            await dislikeCollection.save();
+
+            // Increment the dislikes in the movie collection
+            await Movie.findByIdAndUpdate(movieId, { $inc: { dislikes: 1 } });
+
+            // If the movie is in the likes collection, remove it and decrement likes
+            let likeCollection = await Likes.findOne({ userId });
+            if (likeCollection && likeCollection.content.includes(movieId)) {
+                likeCollection.content = likeCollection.content.filter(id => id !== movieId);
+                await likeCollection.save();
+
+                // Decrement likes in the movie collection
+                await Movie.findByIdAndUpdate(movieId, { $inc: { likes: -1 } });
+            }
+
+            const [updatedLikesCollection, updatedDislikesCollection] = await Promise.all([
+                Likes.findOne({ userId }),
+                Dislikes.findOne({ userId })
+            ]);
+
+            // Send the updated collections to the frontend
+            res.status(200).json({
+                likes: updatedLikesCollection ,
+                dislikes: updatedDislikesCollection 
+            });
+        }
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
+
+
+
 module.exports = {
     add_movie,
     update_movie,
@@ -230,6 +368,8 @@ module.exports = {
     get_all_movie,
     add_review,
     delete_review,
-    get_reviews_by_movieId
+    get_reviews_by_movieId,
+    like_movie,
+    dislike_movie
 }
 

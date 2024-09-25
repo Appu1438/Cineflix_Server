@@ -3,17 +3,19 @@ const { add_movie,
     delete_movie,
     get_movie,
     get_random_movie,
-    get_all_movie, 
+    get_all_movie,
     add_review,
     delete_review,
-    get_reviews_by_movieId} = require('../controllers/movieController')
-    
+    get_reviews_by_movieId,
+    like_movie,
+    dislike_movie } = require('../controllers/movieController')
+
 const verify = require('../middleware/verifyToken')
 
 const router = require('express').Router()
 
 
-router.post('/', verify, add_movie) 
+router.post('/', verify, add_movie)
 
 router.put('/:id', verify, update_movie)
 
@@ -30,6 +32,10 @@ router.post('/review/add', verify, add_review)
 router.delete('/review/delete', verify, delete_review)
 
 router.get('/review/:id', verify, get_reviews_by_movieId)
+
+router.post('/likes/add', verify, like_movie)
+
+router.delete('/likes/delete', verify, dislike_movie)
 
 
 module.exports = router

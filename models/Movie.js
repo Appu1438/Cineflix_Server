@@ -16,7 +16,10 @@ const MovieSchema = new mongoose.Schema({
     favCount: { type: Number, default: 0 },
     ratings: { type: Array },
     average: { type: Number, default: 0 },
-    reviewcount: { type: Number, default: 0 }
+    reviewcount: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
+    dislikes: { type: Number, default: 0 },
+
 
 }, {
     timestamps: true

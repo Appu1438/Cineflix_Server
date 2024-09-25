@@ -2,6 +2,8 @@ const User = require('../models/User')
 const Movie = require('../models/Movie')
 const Favourites = require('../models/Favourites')
 const History = require('../models/History')
+const Likes = require('../models/Likes')
+const Dislikes = require('../models/Dislikes')
 const WatchLater = require('../models/WatchLater')
 const bcrypt = require('bcryptjs');
 
@@ -409,6 +411,32 @@ const get_user_history = async (req, res) => {
     }
 };
 
+const get_user_likes = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        // Fetch the likes and dislikes collections in parallel using Promise.all
+        const [likesCollection, dislikesCollection] = await Promise.all([
+            Likes.findOne({ userId }),
+            Dislikes.findOne({ userId })
+        ]);
+
+        // Check if neither collection exists
+        if (!likesCollection && !dislikesCollection) {
+            return res.status(404).json("Likes and Dislikes collections not found");
+        }
+
+        // Respond with both collections
+        res.status(200).json({
+            likes: likesCollection ? likesCollection : {},
+            dislikes: dislikesCollection ? dislikesCollection : {}
+        });
+    } catch (error) {
+        res.status(500).json(error);
+    }
+
+}
+
 module.exports = {
     update_user,
     delete_user,
@@ -423,5 +451,6 @@ module.exports = {
     get_user_watchlater,
     add_movie_to_history,
     remove_movie_from_history,
-    get_user_history
+    get_user_history,
+    get_user_likes
 }

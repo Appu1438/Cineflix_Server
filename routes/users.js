@@ -11,7 +11,8 @@ const { update_user,
     get_user_history,
     add_user_watchlater,
     remove_user_watchlater,
-    get_user_watchlater } = require('../controllers/userController')
+    get_user_watchlater, 
+    get_user_likes} = require('../controllers/userController')
 
 const verify = require('../middleware/verifyToken')
 
@@ -46,5 +47,7 @@ router.post('/history/add', add_movie_to_history)
 router.delete('/history/delete', remove_movie_from_history)
 
 router.get('/history/:id', get_user_history)
+
+router.get('/likes/:id', get_user_likes)
 
 module.exports = router
