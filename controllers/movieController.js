@@ -110,7 +110,8 @@ const get_all_movie = async (req, res) => {
     }
 }
 const add_review = async (req, res) => {
-    const { userId, userName, movieId, rating, review } = req.body;
+    const movieId = req.params.id
+    const { userId, userName, rating, review } = req.body;
 
     if (req.user.id === userId || req.user.isAdmin) {
         const newReview = new Review({
@@ -225,7 +226,7 @@ const get_reviews_by_movieId = async (req, res) => {
 
 // Like a movie
 const like_movie = async (req, res) => {
-    const userId = req.body.userId;
+    const userId = req.params.id;
     const movieId = req.body.movieId;
 
     try {
@@ -252,8 +253,8 @@ const like_movie = async (req, res) => {
 
             // Send the updated collections to the frontend
             res.status(200).json({
-                likes: updatedLikesCollection ,
-                dislikes: updatedDislikesCollection 
+                likes: updatedLikesCollection,
+                dislikes: updatedDislikesCollection
             });
         } else {
             // Add movie to the likes collection (like)
@@ -277,11 +278,10 @@ const like_movie = async (req, res) => {
                 Likes.findOne({ userId }),
                 Dislikes.findOne({ userId })
             ]);
-
             // Send the updated collections to the frontend
             res.status(200).json({
-                likes: updatedLikesCollection ,
-                dislikes: updatedDislikesCollection 
+                likes: updatedLikesCollection,
+                dislikes: updatedDislikesCollection
             });
         }
     } catch (error) {
@@ -292,7 +292,7 @@ const like_movie = async (req, res) => {
 // Dislike a movie
 const dislike_movie = async (req, res) => {
     console.log(req.query)
-    const userId = req.query.userId;
+    const userId = req.params.id;
     const movieId = req.query.movieId;
 
     try {
@@ -320,8 +320,8 @@ const dislike_movie = async (req, res) => {
 
             // Send the updated collections to the frontend
             res.status(200).json({
-                likes: updatedLikesCollection ,
-                dislikes: updatedDislikesCollection 
+                likes: updatedLikesCollection,
+                dislikes: updatedDislikesCollection
             });
         } else {
             // Add movie to the dislikes collection (dislike)
@@ -348,8 +348,8 @@ const dislike_movie = async (req, res) => {
 
             // Send the updated collections to the frontend
             res.status(200).json({
-                likes: updatedLikesCollection ,
-                dislikes: updatedDislikesCollection 
+                likes: updatedLikesCollection,
+                dislikes: updatedDislikesCollection
             });
         }
     } catch (error) {

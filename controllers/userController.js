@@ -112,7 +112,7 @@ const user_stats = async (req, res) => {
 }
 
 const add_user_fav = async (req, res) => {
-    const userId = req.body.userId;
+    const userId = req.params.id;
     const movieId = req.body.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
@@ -154,7 +154,7 @@ const add_user_fav = async (req, res) => {
 };
 
 const remove_user_fav = async (req, res) => {
-    const userId = req.query.userId;
+    const userId = req.params.id;
     const movieId = req.query.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
@@ -211,7 +211,7 @@ const get_user_fav = async (req, res) => {
 
 const add_user_watchlater = async (req, res) => {
 
-    const userId = req.body.userId;
+    const userId = req.params.id;
     const movieId = req.body.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
@@ -253,7 +253,7 @@ const add_user_watchlater = async (req, res) => {
 
 const remove_user_watchlater = async (req, res) => {
     console.log(req.query);
-    const userId = req.query.userId;
+    const userId = req.params.id;
     const movieId = req.query.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
@@ -310,7 +310,8 @@ const get_user_watchlater = async (req, res) => {
 };
 
 const add_movie_to_history = async (req, res) => {
-    const { userId, movieId } = req.body;
+    const userId = req.params.id;
+    const movieId = req.body.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
 
@@ -354,7 +355,7 @@ const add_movie_to_history = async (req, res) => {
 
 const remove_movie_from_history = async (req, res) => {
     console.log(req.body);
-    const userId = req.body.userId;
+    const userId = req.params.id;
     const movieId = req.body.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {

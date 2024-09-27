@@ -27,15 +27,15 @@ router.get('/random', verify, get_random_movie)
 
 router.get('/', verify, get_all_movie)
 
-router.post('/review/add', verify, add_review)
+router.post('/review/:id', verify, add_review)
 
-router.delete('/review/delete', verify, delete_review)
+router.delete('/review/:id', verify, delete_review)
 
 router.get('/review/:id', verify, get_reviews_by_movieId)
 
-router.post('/likes/add', verify, like_movie)
+router.post('/likes/:id', verify, like_movie)
 
-router.delete('/likes/delete', verify, dislike_movie)
+router.delete('/likes/:id', verify, dislike_movie)
 
 
 module.exports = router
