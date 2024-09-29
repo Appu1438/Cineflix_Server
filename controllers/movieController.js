@@ -160,7 +160,7 @@ const add_review = async (req, res) => {
 };
 
 const delete_review = async (req, res) => {
-    const { id } = req.body; // Extract the review ID from the request body
+    const id = req.query.reviewId; // Extract the review ID from the request body
     console.log(`Received request to delete review with ID: ${id}`);
 
     try {
