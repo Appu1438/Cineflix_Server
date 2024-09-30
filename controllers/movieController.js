@@ -180,6 +180,7 @@ const delete_review = async (req, res) => {
             // Find the associated movie
             const movie = await Movie.findById(review.movieId);
             if (!movie) {
+                console.log('movie not found')
                 return res.status(404).json({ message: 'Movie not found.' });
             }
 
@@ -190,9 +191,14 @@ const delete_review = async (req, res) => {
             movie.reviewcount = Math.max((movie.reviewcount || 0) - 1, 0);
 
             // Recalculate average rating
-            const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
-            movie.average = movie.ratings.length > 0 ? totalRating / movie.ratings.length : 0;
+            if (Array.isArray(movie.ratings) && movie.ratings.length > 0) {
+                const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
+                movie.average = totalRating / movie.ratings.length;
+            } else {
+                movie.average = 0;  // Handle case where ratings array is empty or invalid
+            }
 
+            console.log(movie.average);
             // Save the updated movie document
             await movie.save();
 
