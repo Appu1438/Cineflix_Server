@@ -8,7 +8,8 @@ const { add_movie,
     delete_review,
     get_reviews_by_movieId,
     like_movie,
-    dislike_movie } = require('../controllers/movieController')
+    dislike_movie, 
+    get_related_movie} = require('../controllers/movieController')
 
 const verify = require('../middleware/verifyToken')
 
@@ -24,6 +25,8 @@ router.delete('/:id', verify, delete_movie)
 router.get('/find/:id', verify, get_movie)
 
 router.get('/random', verify, get_random_movie)
+
+router.get('/related/:genre', get_related_movie);
 
 router.get('/', verify, get_all_movie)
 

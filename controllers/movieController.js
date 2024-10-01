@@ -61,6 +61,7 @@ const delete_movie = async (req, res) => {
 }
 
 const get_movie = async (req, res) => {
+    console.log(req.params.id)
     try {
         const movie = await Movie.findById(req.params.id)
         res.status(200).json(movie)
@@ -93,6 +94,25 @@ const get_random_movie = async (req, res) => {
         res.status(500).json(error)
     }
 }
+
+const get_related_movie = async (req, res) => {
+    const genre = req.params.genre.split(','); // Get genres from params and split into an array
+    console.log(genre)
+    let movies;
+
+    try {
+        // Fetch movies that match any of the genres in the array
+        movies = await Movie.aggregate([
+            { $match: { genre: { $in: genre } } }, // Match movies with genres in the array
+            // { $sample: { size: 5 } } // Randomly select 5 movies
+        ]);
+        // console.log(movies)
+        res.status(200).json(movies);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching related movies', error: error.message });
+    }
+};
+
 
 const get_all_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -214,7 +234,7 @@ const delete_review = async (req, res) => {
 };
 const get_reviews_by_movieId = async (req, res) => {
     const movieId = req.params.id; // Extract movieId from request parameters
-
+    console.log(movieId)
     try {
         // Find all reviews with the given movieId
         const reviews = await Review.find({ movieId });
@@ -376,6 +396,7 @@ module.exports = {
     delete_review,
     get_reviews_by_movieId,
     like_movie,
-    dislike_movie
+    dislike_movie,
+    get_related_movie
 }
 

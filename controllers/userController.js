@@ -116,6 +116,10 @@ const add_user_fav = async (req, res) => {
     const movieId = req.body.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
+
+        if (!movieId) {
+            return res.status(404).json("Movie ID Nor Found")
+        }
         try {
             // Find the favorite collection for the user
             let favCollection = await Favourites.findOne({ userId });
@@ -215,7 +219,9 @@ const add_user_watchlater = async (req, res) => {
     const movieId = req.body.movieId;
 
     if (req.user.id == userId || req.user.isAdmin) {
-
+        if (!movieId) {
+            return res.status(404).json("Movie ID Nor Found")
+        }
 
         try {
 
@@ -315,6 +321,9 @@ const add_movie_to_history = async (req, res) => {
 
     if (req.user.id == userId || req.user.isAdmin) {
 
+        if (!movieId) {
+            return res.status(404).json("Movie ID Nor Found")
+        }
 
         try {
             // Find the user's history document
