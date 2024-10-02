@@ -104,7 +104,7 @@ const get_related_movie = async (req, res) => {
         // Fetch movies that match any of the genres in the array
         movies = await Movie.aggregate([
             { $match: { genre: { $in: genre } } }, // Match movies with genres in the array
-            // { $sample: { size: 5 } } // Randomly select 5 movies
+            { $sample: { size: 10 } } // Randomly select 5 movies
         ]);
         // console.log(movies)
         res.status(200).json(movies);
@@ -238,12 +238,7 @@ const get_reviews_by_movieId = async (req, res) => {
     try {
         // Find all reviews with the given movieId
         const reviews = await Review.find({ movieId });
-
-        if (reviews.length === 0) {
-            return res.status(404).json({ message: 'No reviews found for this movie.' });
-        }
-
-        res.status(200).json(reviews);
+        res.status(200).json(reviews?.reverse());
     } catch (error) {
         res.status(500).json(error);
     }
