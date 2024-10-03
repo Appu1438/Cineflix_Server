@@ -8,7 +8,7 @@ const generateAccessToken = (user) => {
     return jwt.sign(
         { id: user._id, isAdmin: user.isAdmin },
         process.env.JWT_SECRET,
-        { expiresIn: '1min' }  // Access token expiration time
+        { expiresIn: '10min' }  // Access token expiration time
     );
 };
 
