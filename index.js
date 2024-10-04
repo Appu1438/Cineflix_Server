@@ -2,7 +2,8 @@ const express = require('express')
 const app = express()
 const mongoose = require('mongoose')
 const dotenv = require('dotenv')
-const cors=require('cors')
+const cors = require('cors')
+const cookieParser = require('cookie-parser');
 
 const authRouter = require('./routes/auth')
 const userRouter = require('./routes/users')
@@ -10,7 +11,21 @@ const moviesRouter = require('./routes/movies')
 const ListRouter = require('./routes/lists')
 
 dotenv.config()
-app.use(cors())
+app.use(cookieParser()); // Use cookie-parser middleware
+
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all origins
+        }
+    },
+    credentials: true, // Allow credentials to be sent
+}));
+
 
 mongoose.connect(process.env.MONGO_URL).then(() => {
     console.log("Database Connected")

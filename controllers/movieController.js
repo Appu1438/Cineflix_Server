@@ -62,7 +62,7 @@ const delete_movie = async (req, res) => {
 }
 
 const get_movie = async (req, res) => {
-    console.log(req.params.id)
+    // console.log(req.params.id)
     try {
         const movie = await Movie.findById(req.params.id)
         res.status(200).json(movie)

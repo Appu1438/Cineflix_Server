@@ -8,7 +8,7 @@ const generateAccessToken = (user) => {
     return jwt.sign(
         { id: user._id, isAdmin: user.isAdmin },
         process.env.JWT_SECRET,
-        { expiresIn: '10min' }  // Access token expiration time
+        { expiresIn: '1min' }  // Access token expiration time
     );
 };
 
@@ -81,6 +81,13 @@ const login = async (req, res) => {
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
 
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'None',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         // Remove the password from the user object
         const { password: pwd, ...info } = user._doc;
 
@@ -90,7 +97,6 @@ const login = async (req, res) => {
         res.status(200).json({
             ...info,
             accessToken,
-            refreshToken,
         });
     } catch (error) {
         console.error("Login error:", error); // Log any unexpected errors
@@ -98,10 +104,32 @@ const login = async (req, res) => {
     }
 };
 
+const logout = async (req, res) => {
+    try {
+        console.log('logout');
+        // Clear the refresh token cookie by setting it with an expired date
+        res.cookie('refreshToken', '', {
+            httpOnly: true,
+            secure: true, // Use true in production for HTTPS
+            sameSite: 'None',
+            expires: new Date(0) // Set cookie to expire immediately
+        });
+
+        // Send success response to frontend
+        res.status(200).json({ message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Logout Error: ', error);
+        res.status(500).json({ message: 'An error occurred during logout' });
+    }
+};
+
+
 
 const refreshToken = async (req, res) => {
-    const refreshToken = req.body.refreshToken;
+
+    const refreshToken = req.cookies.refreshToken; // Access the cookie
     // console.log(refreshToken)
+    console.log("Cookies received:", req.cookies); // Log all cookies
 
     if (!refreshToken) {
         return res.status(401).json("Token is required!");
@@ -150,5 +178,6 @@ module.exports = {
     register,
     login,
     refreshToken,
-    get_User
+    get_User,
+    logout
 }
