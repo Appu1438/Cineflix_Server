@@ -3,6 +3,7 @@ const Review = require('../models/Reviews')
 const List = require('../models/List')
 const Likes = require('../models/Likes')
 const Dislikes = require('../models/Dislikes')
+const mongoose = require('mongoose');
 
 const add_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -94,24 +95,34 @@ const get_random_movie = async (req, res) => {
         res.status(500).json(error)
     }
 }
-
 const get_related_movie = async (req, res) => {
     const genre = req.params.genre.split(','); // Get genres from params and split into an array
-    console.log(genre)
+    const movieId = req.query.movieId; // Extract movieId from the query parameters
     let movies;
+    console.log(genre, movieId)
 
     try {
-        // Fetch movies that match any of the genres in the array
+        // Convert movieId to ObjectId
+        const movieObjectId = new mongoose.Types.ObjectId(movieId);
+
+        // Fetch movies that match any of the genres in the array, excluding the current movie
         movies = await Movie.aggregate([
-            { $match: { genre: { $in: genre } } }, // Match movies with genres in the array
-            { $sample: { size: 10 } } // Randomly select 5 movies
+            {
+                $match: {
+                    genre: { $in: genre },
+                    _id: { $ne: movieObjectId } // Exclude the current movie
+                }
+            },
+            { $sample: { size: 10 } } // Randomly select 10 movies
         ]);
-        // console.log(movies)
+
+
         res.status(200).json(movies);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching related movies', error: error.message });
     }
 };
+
 
 
 const get_all_movie = async (req, res) => {
@@ -130,54 +141,96 @@ const get_all_movie = async (req, res) => {
     }
 }
 const add_review = async (req, res) => {
-    const movieId = req.params.id
+    const movieId = req.params.id;
     const { userId, userName, rating, review } = req.body;
 
     if (req.user.id === userId || req.user.isAdmin) {
-        const newReview = new Review({
-            userId,
-            userName,
-            movieId,
-            rating,
-            review
-        });
-
         try {
-            // Save the new review
-            const savedReview = await newReview.save();
+            // Check if the user already reviewed this movie
+            const existingReview = await Review.findOne({ movieId, userId });
 
-            // Find the movie and update
-            const movie = await Movie.findById(movieId);
-            if (!movie) {
-                return res.status(404).json({ message: 'Movie not found.' });
+            if (existingReview) {
+                // If a review exists, update it
+                const oldRating = existingReview.rating
+                existingReview.rating = rating;
+                existingReview.review = review;
+
+                // Save the updated review
+                const updatedReview = await existingReview.save();
+
+                // Update the movie's ratings and review count
+                const movie = await Movie.findById(movieId);
+                if (!movie) {
+                    return res.status(404).json({ message: 'Movie not found.' });
+                }
+
+                // Find and update the user's rating in the movie's ratings array
+                const userRatingIndex = movie.ratings.findIndex(r => r === oldRating);
+                if (userRatingIndex !== -1) {
+                    movie.ratings[userRatingIndex] = rating;
+                } else {
+                    movie.ratings.push(rating);
+                }
+
+                // Recalculate review count and average rating
+                movie.reviewcount = movie.reviewcount || movie.ratings.length;
+                const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
+                movie.average = totalRating / movie.ratings.length;
+
+                // Save the updated movie
+                await movie.save();
+
+                res.status(200).json({
+                    message: 'Review updated successfully and movie updated.',
+                    review: updatedReview,
+                    movie
+                });
+
+            } else {
+                // If no existing review, create a new one
+                const newReview = new Review({
+                    userId,
+                    userName,
+                    movieId,
+                    rating,
+                    review
+                });
+
+                // Save the new review
+                const savedReview = await newReview.save();
+
+                // Find the movie and update its ratings and review count
+                const movie = await Movie.findById(movieId);
+                if (!movie) {
+                    return res.status(404).json({ message: 'Movie not found.' });
+                }
+
+                // Push the new rating to the movie's ratings array
+                movie.ratings.push(rating);
+
+                // Update review count and recalculate average rating
+                movie.reviewcount = (movie.reviewcount || 0) + 1;
+                const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
+                movie.average = totalRating / movie.ratings.length;
+
+                // Save the updated movie document
+                await movie.save();
+
+                res.status(201).json({
+                    message: 'Review added successfully and movie updated.',
+                    review: savedReview,
+                    movie
+                });
             }
-
-            // Push the new rating to the ratings array
-            movie.ratings.push(rating);
-
-            // Update reviewCount
-            movie.reviewcount = (movie.reviewcount || 0) + 1;
-
-            // Recalculate average rating
-            const totalRating = movie.ratings.reduce((acc, rate) => acc + rate, 0);
-            movie.average = movie.ratings.length > 0 ? totalRating / movie.ratings.length : 0;
-
-            // Save the updated movie document
-            await movie.save();
-
-            res.status(200).json({
-                message: 'Review added successfully and movie updated.',
-                review: savedReview,
-                movie
-            });
         } catch (error) {
-            console.error('Error adding review or updating movie:', error);
-            res.status(500).json({ message: 'Error adding review or updating movie.', error });
+            console.error('Error adding or updating review:', error);
+            res.status(500).json({ message: 'Error adding or updating review.', error });
         }
     } else {
         res.status(403).json("You are not allowed to add a review for this user.");
     }
 };
+
 
 const delete_review = async (req, res) => {
     const id = req.query.reviewId; // Extract the review ID from the request body
