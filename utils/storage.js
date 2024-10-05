@@ -1,5 +1,7 @@
 const multer = require('multer');
 const path = require('path');
+const ffmpeg=require('fluent-ffmpeg')
+const { spawn } = require('child_process');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -13,7 +15,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+
 module.exports = {
     storage,
-    upload
+    upload,
 }

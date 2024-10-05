@@ -23,7 +23,7 @@ router.post('/', verify, add_movie)
 
 router.post('/upload-video', verify, upload.single('video'), upload_video);
 
-router.get('/stream-video', verify, stream_video);
+router.get('/stream-video', stream_video);
 
 router.put('/:id', verify, update_movie)
 

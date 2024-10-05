@@ -6,11 +6,24 @@ const Dislikes = require('../models/Dislikes')
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs')
+const ffmpeg = require('fluent-ffmpeg')
+
 const mongoose = require('mongoose');
 const { storage, upload } = require('../utils/storage')
 
 
+// Manually set the FFmpeg path
+ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
+ffmpeg.setFfprobePath('C:\\ffmpeg\\bin\\ffprobe.exe');
 
+// Test if FFmpeg works
+ffmpeg.getAvailableFormats((err, formats) => {
+    if (err) {
+        console.error('Error:', err.message);
+    } else {
+        console.log('Available formats:', formats);
+    }
+});
 const add_movie = async (req, res) => {
     if (req.user.isAdmin) {
         const newMovie = new Movie(req.body)
@@ -29,22 +42,50 @@ const add_movie = async (req, res) => {
     }
 }
 
+
 // Video upload controller
 const upload_video = async (req, res) => {
     try {
-        // The video file will be available in req.file after the upload
         if (!req.file) {
             return res.status(400).send({ message: 'No video file uploaded.' });
         }
+        const videoPath = `${req.file.filename}`
+        const originalVideoPath = path.join(__dirname, '..', 'public', 'assets', 'videos', req.file.filename);
+        console.log(`Original video uploaded to: ${originalVideoPath}`);
 
-        // Access video file details
-        const videoPath = `/videos/${req.file.filename}`;  // Path to the video in the public directory
-        console.log(`Video uploaded to: ${videoPath}`);
+        // Transcode video to different qualities
+        const qualities = ['360p', '480p', '720p', '1080p'];
+        const outputDir = path.join(__dirname, '..', 'public', 'assets', 'transcoded');
 
-        // Send a response with the video URL (optional)
+        // Ensure the output directory exists
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir);
+        }
+
+        await qualities.forEach(quality => {
+            const outputFilePath = path.join(outputDir, `${quality}_${req.file.filename}`);
+            ffmpeg(originalVideoPath)
+                .output(outputFilePath)
+                .videoCodec('libx264')
+                .videoBitrate(
+                    quality === '360p' ? '300k' :
+                        quality === '480p' ? '600k' :
+                            quality === '720p' ? '1200k' :
+                                quality === '1080p' ? '2500k' :  // Add more qualities as needed
+                                    '1200k' // Default bitrate (e.g., for '720p')
+                ).on('end', () => {
+                    console.log(`Transcoded to ${quality}: ${outputFilePath}`);
+                })
+                .on('error', (err) => {
+                    console.error('Error during transcoding:', err);
+                })
+                .run();
+        });
+
+        // Send response with video URL
         res.status(200).send({
-            message: 'Video uploaded successfully!',
-            videoUrl: videoPath,  // Path to access the video in public/videos
+            message: 'Video uploaded and transcoded successfully!',
+            videoUrl: videoPath,  // Path to access the original video
         });
     } catch (error) {
         console.error('Error uploading video:', error);
@@ -52,42 +93,46 @@ const upload_video = async (req, res) => {
     }
 };
 
+
+
 const stream_video = async (req, res) => {
-    const filename = req.query.filename; // Get the filename from the query
-    console.log('Requested filename:', filename);
+    const filename = req.query.filename;
+    const quality = req.query.quality || "720p"; // Default to 720p if not specified
+  
+    console.log(`Requested video: ${filename}, Quality: ${quality}`);
 
-    const videoPath = path.join(__dirname, '..', 'public', 'assets', filename); // Ensure the path is correct
-    console.log('Video path:', videoPath);
-
-    // Set the content type to video
-    res.setHeader('Content-Type', 'video/mp4');
+    // Get the path of the video based on requested quality
+    const quality_filename = `${quality}_${filename}`;
+    // Construct the path to the transcoded video
+    const videoPath = path.join(__dirname, '..', 'public', 'assets', 'transcoded', quality_filename); // Ensure the path is correct
+    console.log(videoPath)
 
     try {
-        // Check if the file exists and is a file
         if (!fs.existsSync(videoPath) || !fs.statSync(videoPath).isFile()) {
-            console.log('Video Not Found')
             return res.status(404).send({ message: 'Video file not found.' });
         }
 
         const stat = fs.statSync(videoPath);
         const fileSize = stat.size;
-        const range = req.headers.range; // Get the range header
+        const range = req.headers.range;
 
         if (range) {
-            const start = Number(range.replace(/\D/g, '')); // Start byte
-            const end = Math.min(start + 1000000, fileSize - 1); // Limit end byte to file size, e.g., 1MB chunks
+            const parts = range.replace(/bytes=/, '').split('-');
+            const start = parseInt(parts[0], 10);
+            const end = Math.min(start + 1000000, fileSize - 1); // 1MB chunk size
+            const chunkSize = (end - start) + 1;
 
             res.writeHead(206, {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
-                'Content-Length': end - start + 1,
+                'Content-Length': chunkSize,
                 'Content-Type': 'video/mp4',
             });
 
-            const stream = fs.createReadStream(videoPath, { start, end });
-            stream.pipe(res); // Stream the video to the client
+            // Stream the requested quality video
+            fs.createReadStream(videoPath, { start, end }).pipe(res);
         } else {
-            // Send the entire video if no range is specified
+            // No range requested, send the entire video
             res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4' });
             fs.createReadStream(videoPath).pipe(res);
         }
@@ -96,6 +141,8 @@ const stream_video = async (req, res) => {
         res.status(500).send('Error streaming video');
     }
 };
+
+
 
 const update_movie = async (req, res) => {
     if (req.user.isAdmin) {
