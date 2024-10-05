@@ -8,15 +8,22 @@ const { add_movie,
     delete_review,
     get_reviews_by_movieId,
     like_movie,
-    dislike_movie, 
-    get_related_movie} = require('../controllers/movieController')
+    dislike_movie,
+    get_related_movie,
+    upload_video, 
+    stream_video} = require('../controllers/movieController')
 
-const verify = require('../middleware/verifyToken')
+const verify = require('../middleware/verifyToken');
+const { upload } = require('../utils/storage');
 
 const router = require('express').Router()
 
 
 router.post('/', verify, add_movie)
+
+router.post('/upload-video', verify, upload.single('video'), upload_video);
+
+router.get('/stream-video', verify, stream_video);
 
 router.put('/:id', verify, update_movie)
 

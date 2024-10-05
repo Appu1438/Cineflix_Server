@@ -4,7 +4,7 @@ const mongoose = require('mongoose')
 const dotenv = require('dotenv')
 const cors = require('cors')
 const cookieParser = require('cookie-parser');
-
+const path = require('path')
 const authRouter = require('./routes/auth')
 const userRouter = require('./routes/users')
 const moviesRouter = require('./routes/movies')
@@ -12,6 +12,7 @@ const ListRouter = require('./routes/lists')
 
 dotenv.config()
 app.use(cookieParser()); // Use cookie-parser middleware
+app.use(express.static(path.join(__dirname, 'public')));
 
 
 app.use(cors({

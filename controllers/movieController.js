@@ -3,7 +3,13 @@ const Review = require('../models/Reviews')
 const List = require('../models/List')
 const Likes = require('../models/Likes')
 const Dislikes = require('../models/Dislikes')
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs')
 const mongoose = require('mongoose');
+const { storage, upload } = require('../utils/storage')
+
+
 
 const add_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -22,6 +28,74 @@ const add_movie = async (req, res) => {
 
     }
 }
+
+// Video upload controller
+const upload_video = async (req, res) => {
+    try {
+        // The video file will be available in req.file after the upload
+        if (!req.file) {
+            return res.status(400).send({ message: 'No video file uploaded.' });
+        }
+
+        // Access video file details
+        const videoPath = `/videos/${req.file.filename}`;  // Path to the video in the public directory
+        console.log(`Video uploaded to: ${videoPath}`);
+
+        // Send a response with the video URL (optional)
+        res.status(200).send({
+            message: 'Video uploaded successfully!',
+            videoUrl: videoPath,  // Path to access the video in public/videos
+        });
+    } catch (error) {
+        console.error('Error uploading video:', error);
+        res.status(500).send({ message: 'Error uploading video.', error });
+    }
+};
+
+const stream_video = async (req, res) => {
+    const filename = req.query.filename; // Get the filename from the query
+    console.log('Requested filename:', filename);
+
+    const videoPath = path.join(__dirname, '..', 'public', 'assets', filename); // Ensure the path is correct
+    console.log('Video path:', videoPath);
+
+    // Set the content type to video
+    res.setHeader('Content-Type', 'video/mp4');
+
+    try {
+        // Check if the file exists and is a file
+        if (!fs.existsSync(videoPath) || !fs.statSync(videoPath).isFile()) {
+            console.log('Video Not Found')
+            return res.status(404).send({ message: 'Video file not found.' });
+        }
+
+        const stat = fs.statSync(videoPath);
+        const fileSize = stat.size;
+        const range = req.headers.range; // Get the range header
+
+        if (range) {
+            const start = Number(range.replace(/\D/g, '')); // Start byte
+            const end = Math.min(start + 1000000, fileSize - 1); // Limit end byte to file size, e.g., 1MB chunks
+
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': end - start + 1,
+                'Content-Type': 'video/mp4',
+            });
+
+            const stream = fs.createReadStream(videoPath, { start, end });
+            stream.pipe(res); // Stream the video to the client
+        } else {
+            // Send the entire video if no range is specified
+            res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4' });
+            fs.createReadStream(videoPath).pipe(res);
+        }
+    } catch (error) {
+        console.error('Error streaming video:', error);
+        res.status(500).send('Error streaming video');
+    }
+};
 
 const update_movie = async (req, res) => {
     if (req.user.isAdmin) {
@@ -99,7 +173,7 @@ const get_related_movie = async (req, res) => {
     const genre = req.params.genre.split(','); // Get genres from params and split into an array
     const movieId = req.query.movieId; // Extract movieId from the query parameters
     let movies;
-    console.log(genre, movieId)
+    // console.log(genre, movieId)
 
     try {
         // Convert movieId to ObjectId
@@ -445,6 +519,8 @@ module.exports = {
     get_reviews_by_movieId,
     like_movie,
     dislike_movie,
-    get_related_movie
+    get_related_movie,
+    upload_video,
+    stream_video
 }
 
